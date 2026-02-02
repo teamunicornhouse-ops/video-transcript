@@ -1,0 +1,80 @@
+{
+  "name": "chronox-transcript",
+  "version": "1.0.0",
+  "productName": "크로노X 스크립트 변환기",
+  "description": "영상 스크립트 변환기 (유니콘하우스, 크로노엑스 전용)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "echo 'Build completed'",
+    "dist": "electron-builder --mac",
+    "dist:mac": "electron-builder --mac --arm64 --x64",
+    "dist:signed": "npm run dist:mac && npm run sign",
+    "sign": "./scripts/sign-app.sh './dist/mac/크로노X 스크립트 변환기.app' && ./scripts/sign-app.sh './dist/mac-arm64/크로노X 스크립트 변환기.app'"
+  },
+  "keywords": ["video", "transcript", "whisper", "ai", "chronox"],
+  "author": "ChronoX",
+  "license": "PRIVATE",
+  "devDependencies": {
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.chronox.transcript",
+    "productName": "크로노X 스크립트 변환기",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null
+    },
+    "dmg": {
+      "title": "크로노X 스크립트 변환기 설치",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 600,
+        "height": 400
+      }
+    },
+    "files": [
+      "**/*",
+      "!**/*.pyc",
+      "!**/__pycache__",
+      "!dist",
+      "!node_modules/.cache"
+    ],
+    "extraResources": [
+      {
+        "from": "venv",
+        "to": "venv",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "cache",
+        "to": "cache",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "temp_audio",
+        "to": "temp_audio",
+        "filter": ["**/*"]
+      }
+    ],
+    "asar": false
+  }
+}

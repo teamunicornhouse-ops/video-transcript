@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>크로노X 릴스스크립트 변환기</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--bg-primary:#0f0f0f;--bg-secondary:#1a1a1a;--bg-tertiary:#2a2a2a;--text-primary:#fff;--text-secondary:#b0b0b0;--accent:#6366f1;--accent-hover:#818cf8;--success:#22c55e;--error:#ef4444;--warning:#f59e0b;--border:#3a3a3a}
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 1rem;
+        }
+
+        .server-status {
+            text-align: center;
+            padding: 10px 20px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--error);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.online {
+            background: var(--success);
+        }
+
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+        .input-group {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .url-input-wrapper {
+            position: relative;
+        }
+
+        input[type="url"] {
+            width: 100%;
+            padding: 15px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="url"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        input[type="url"]::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .supported-formats {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 25px;
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: var(--border);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
+        }
+
+        button.success {
+            background: var(--success);
+        }
+
+        button.success:hover:not(:disabled) {
+            background: #16a34a;
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .result-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .result-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .info-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .language-badge {
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .duration-badge {
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .video-title {
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .transcript-content {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.8;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .transcript-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .transcript-content::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        .transcript-content::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 4px;
+        }
+
+        .transcript-content p {
+            margin-bottom: 1.2em;
+        }
+
+        .transcript-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border: 1px solid var(--border);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+
+        .error-message {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--error);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+            color: var(--error);
+            text-align: center;
+        }
+
+        .error-message.active {
+            display: block;
+            animation: shake 0.5s ease-out;
+        }
+
+        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+
+        /* 복사 알림 스타일 */
+        .copy-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.3);
+            font-weight: 500;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .copy-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .copy-notification span {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-section {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .feature-item {
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            button {
+                min-width: 100px;
+                font-size: 0.9rem;
+                padding: 12px 20px;
+            }
+
+            .transcript-content {
+                max-height: 400px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 크로노X 스크립트 변환기</h1>
+        <p class="subtitle">영상 스크립트 변환기 (유니콘하우스, 크로노엑스 전용 내부프로그램)</p>
+
+        <div class="server-status">
+            <span class="status-indicator" id="statusIndicator"></span>
+            <span id="statusText">서버 연결 확인 중...</span>
+        </div>
+
+        <div class="input-group">
+            <label for="videoUrl">영상 URL 입력하세요:</label>
+            <div class="url-input-wrapper">
+                <input
+                    type="url"
+                    id="videoUrl"
+                    placeholder="https://www.youtube.com/watch?v=... 또는 Instagram/TikTok URL"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+            </div>
+            <div class="supported-formats">
+                ✅ YouTube, Instagram Reels, TikTok, Twitter/X 등 대부분의 비디오 플랫폼 지원
+            </div>
+        </div>
+
+
+        <div class="button-group">
+            <button id="convertBtn" onclick="convertToScript()">
+                <span>🚀</span>
+                <span>스크립트 변환하기</span>
+            </button>
+            <button id="pasteBtn" class="secondary" onclick="pasteFromClipboard()">
+                <span>📋</span>
+                <span>URL 붙여넣기</span>
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">비디오 오디오를 추출하고 있습니다...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 10px;">
+                AI가 음성을 분석하여 정확한 텍스트로 변환 중입니다
+            </p>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="video-title" id="videoTitle"></div>
+
+            <div class="result-header">
+                <h2 class="result-title">📄 추출된 실제 스크립트</h2>
+                <div class="result-info">
+                    <span class="info-badge language-badge" id="languageBadge">언어 감지 중...</span>
+                    <span class="info-badge duration-badge" id="durationBadge">0:00</span>
+                </div>
+            </div>
+
+            <div class="transcript-content" id="transcriptContent"></div>
+
+            <div class="action-buttons">
+                <button class="success" onclick="copyTranscript(event)">
+                    <span>📋</span>
+                    <span>스크립트 복사</span>
+                </button>
+                <button class="secondary" onclick="downloadTranscript(event)">
+                    <span>💾</span>
+                    <span>텍스트 다운로드</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- 복사 성공 알림 -->
+    <div class="copy-notification" id="copyNotification">
+        <span>✅ 스크립트가 복사되었습니다!</span>
+    </div>
+
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+        let currentTranscript = '';
+        let currentLanguage = '';
+
+        async function checkServerStatus(){const e=document.getElementById('statusIndicator'),t=document.getElementById('statusText');try{if((await fetch(`${API_URL}/health`)).ok)e.classList.add('online'),t.textContent='✅ 서버 연결됨 - 실시간 변환 준비 완료';else throw new Error('Server not responding')}catch(n){e.classList.remove('online'),t.textContent='⚠️ 서버 연결 대기 중... (서버를 먼저 실행해주세요)',setTimeout(checkServerStatus,5e3)}}
+
+        function showCopyNotification(){const n=document.getElementById('copyNotification');n.classList.add('show'),setTimeout(()=>n.classList.remove('show'),3e3)}
+
+        function formatTranscript(text) {
+            // 문단 구분 개선
+            if (text.includes('\n\n')) {
+                // 이미 문단 구분이 있는 경우
+                return text
+                    .split('\n\n')
+                    .map(paragraph => `<p style="margin-bottom: 20px; line-height: 1.8;">${paragraph.replace(/\n/g, '<br>')}</p>`)
+                    .join('');
+            } else {
+                // 문단 구분이 없는 경우 문장 단위로 구분
+                const sentences = text.match(/[^.!?。！？]+[.!?。！？]+/g) || [text];
+                let paragraphs = [];
+                let currentParagraph = [];
+
+                sentences.forEach((sentence, index) => {
+                    currentParagraph.push(sentence.trim());
+                    // 3-4문장마다 문단 분리
+                    if ((index + 1) % 4 === 0 || index === sentences.length - 1) {
+                        paragraphs.push(`<p style="margin-bottom: 20px; line-height: 1.8;">${currentParagraph.join(' ')}</p>`);
+                        currentParagraph = [];
+                    }
+                });
+
+                return paragraphs.join('');
+            }
+        }
+
+        function showTooltip(e,t){const o=document.getElementById('tooltip'),r=e.getBoundingClientRect();o.textContent=t,o.style.left=r.left+'px',o.style.top=r.top-40+'px',o.classList.add('show'),setTimeout(()=>o.classList.remove('show'),2e3)}
+
+        function showError(e){const r=document.getElementById('errorMessage');r.textContent=e,r.classList.add('active'),setTimeout(()=>r.classList.remove('active'),5e3)}
+
+        function formatDuration(s){const m=Math.floor(s/60),e=Math.floor(s%60);return`${m}:${e.toString().padStart(2,'0')}`}
+
+        async function convertToScript() {
+            const urlInput = document.getElementById('videoUrl');
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                showError('URL을 입력해주세요!');
+                return;
+            }
+
+            // Basic URL validation
+            if (!url.match(/^https?:\/\/.+/)) {
+                showError('올바른 URL 형식이 아닙니다. https:// 또는 http://로 시작해야 합니다.');
+                return;
+            }
+
+            const loadingEl = document.getElementById('loading');
+            const loadingText = document.getElementById('loadingText');
+            const progressFill = document.getElementById('progressFill');
+            const resultSection = document.getElementById('resultSection');
+            const convertBtn = document.getElementById('convertBtn');
+
+            // Show loading state
+            loadingEl.classList.add('active');
+            resultSection.classList.remove('active');
+            convertBtn.disabled = true;
+
+            // Simulate progress
+            progressFill.style.width = '10%';
+            loadingText.textContent = '비디오 정보를 가져오는 중...';
+
+            setTimeout(() => {
+                progressFill.style.width = '30%';
+                loadingText.textContent = '오디오를 추출하는 중...';
+            }, 500);
+
+            setTimeout(() => {
+                progressFill.style.width = '60%';
+                loadingText.textContent = 'AI가 음성을 분석하는 중...';
+            }, 1500);
+
+            try {
+                const response = await fetch(`${API_URL}/transcribe`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        language: 'auto',
+                        model: 'large'  // 최고 정확도를 위해 large 모델 사용
+                    })
+                });
+
+                progressFill.style.width = '90%';
+                loadingText.textContent = '텍스트 변환 완료...';
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '변환 중 오류가 발생했습니다.');
+                }
+
+                progressFill.style.width = '100%';
+
+                // Update UI with results
+                currentTranscript = data.results?.txt || '';
+                currentLanguage = data.language || 'ko';
+
+                // 비디오 제목 표시
+                document.getElementById('videoTitle').textContent = `📹 ${data.title || url}`;
+
+                // 언어 표시
+                document.getElementById('languageBadge').textContent = data.language || '한국어';
+
+                // 영상 길이 표시
+                if (data.duration) {
+                    const minutes = Math.floor(data.duration / 60);
+                    const seconds = Math.floor(data.duration % 60);
+                    document.getElementById('durationBadge').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                } else {
+                    document.getElementById('durationBadge').textContent = '0:00';
+                }
+
+                // 스크립트 내용 표시
+                if (currentTranscript) {
+                    document.getElementById('transcriptContent').innerHTML = formatTranscript(currentTranscript);
+                } else {
+                    document.getElementById('transcriptContent').innerHTML = '<p style="color: var(--text-secondary);">스크립트를 찾을 수 없습니다.</p>';
+                }
+
+                // Hide loading, show results
+                setTimeout(() => {
+                    loadingEl.classList.remove('active');
+                    resultSection.classList.add('active');
+                    convertBtn.disabled = false;
+                    progressFill.style.width = '0%';
+
+                    // Scroll to results
+                    resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 500);
+
+            } catch (error) {
+                loadingEl.classList.remove('active');
+                convertBtn.disabled = false;
+                progressFill.style.width = '0%';
+                showError(error.message || '서버 연결에 실패했습니다. 서버가 실행 중인지 확인해주세요.');
+            }
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('videoUrl').value = text;
+                showTooltip(event.target, '붙여넣기 완료!');
+            } catch (err) {
+                showError('클립보드 접근 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function copyTranscript(event) {
+            if (!currentTranscript) {
+                showError('복사할 스크립트가 없습니다.');
+                return;
+            }
+
+            // Method 1: Try modern clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(currentTranscript);
+                    showCopyNotification();
+                    return;
+                } catch (err) {
+                    console.log('Clipboard API failed, trying fallback method');
+                }
+            }
+
+            // Method 2: Fallback for all browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = currentTranscript;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.width = '2em';
+            textArea.style.height = '2em';
+            textArea.style.padding = '0';
+            textArea.style.border = 'none';
+            textArea.style.outline = 'none';
+            textArea.style.boxShadow = 'none';
+            textArea.style.background = 'transparent';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            let success = false;
+            try {
+                success = document.execCommand('copy');
+            } catch (err) {
+                console.log('Failed to copy');
+            }
+
+            document.body.removeChild(textArea);
+
+            if (success) {
+                showCopyNotification();
+            } else {
+                // Last resort: show the text in a prompt for manual copying
+                prompt('텍스트를 선택하고 Ctrl+C (또는 Cmd+C)를 눌러 복사하세요:', currentTranscript);
+            }
+        }
+
+        function downloadTranscript(event) {
+            if (!currentTranscript) {
+                showError('다운로드할 스크립트가 없습니다.');
+                return;
+            }
+
+            const videoTitle = document.getElementById('videoTitle').textContent.replace('📹 ', '');
+            const blob = new Blob([currentTranscript], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transcript_${currentLanguage}_${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            const button = event ? event.currentTarget : document.querySelector('.secondary');
+            showTooltip(button, '다운로드가 시작되었습니다!');
+        }
+
+
+        // Handle Enter key in URL input
+        document.getElementById('videoUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                convertToScript();
+            }
+        });
+
+
+        // Check for shared URL parameter
+        window.addEventListener('load', function() {
+            checkServerStatus();
+
+            const params = new URLSearchParams(window.location.search);
+            const sharedUrl = params.get('url');
+            if (sharedUrl) {
+                document.getElementById('videoUrl').value = sharedUrl;
+            }
+        });
+    </script>
+</body>
+</html>
