@@ -283,13 +283,21 @@ main {
 
 .tab-pane textarea {
     width: 100%;
-    min-height: 300px;
+    min-height: 600px;
+    height: 600px;
+    max-height: 80vh;
     padding: 15px;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     font-family: 'Courier New', monospace;
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.5;
     resize: vertical;
+    overflow-y: scroll;
+    overflow-x: auto;
+    white-space: pre;
+    word-wrap: normal;
+    background-color: #f9f9f9;
 }
 
 /* Footer */
