@@ -296,5 +296,6 @@ def health():
     return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
-    # 개발 서버 실행 (프로덕션에서는 debug=False로 변경)
-    app.run(host='0.0.0.0', port=8080, debug=False)
+    # Railway에서 PORT 환경 변수 사용
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False)
