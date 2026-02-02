@@ -114,61 +114,77 @@ def transcribe():
 
         file_path = final_path
 
-        # whisper-ctranslate2 실행
-        output_dir = os.path.dirname(file_path)
+        # Check if whisper is available
+        try:
+            # Try to use whisper-ctranslate2 if available
+            import shutil
+            if not shutil.which('whisper-ctranslate2'):
+                # Fallback message when whisper is not available
+                return jsonify({
+                    'error': '음성 변환 서비스가 현재 사용 불가능합니다. Railway 배포 환경에서는 whisper 패키지 설치 문제로 인해 변환 기능이 제한됩니다.',
+                    'info': '로컬 환경에서는 정상 작동합니다.'
+                }), 503
 
-        # 모델 크기 매핑 - 정확도를 위해 더 큰 모델 사용
-        model_map = {
-            'tiny': 'small',  # tiny 요청시 small 사용
-            'base': 'medium',  # base 요청시 medium 사용
-            'small': 'large-v2',  # small 요청시 large-v2 사용
-            'medium': 'large-v3',  # medium 요청시 large-v3 사용
-            'large': 'large-v3'  # large 요청시 large-v3 사용
-        }
+            output_dir = os.path.dirname(file_path)
 
-        model = model_map.get(model_size, 'large-v3')  # 기본값을 large-v3으로 설정하여 최고 정확도
+            # 모델 크기 매핑 - 정확도를 위해 더 큰 모델 사용
+            model_map = {
+                'tiny': 'small',  # tiny 요청시 small 사용
+                'base': 'medium',  # base 요청시 medium 사용
+                'small': 'large-v2',  # small 요청시 large-v2 사용
+                'medium': 'large-v3',  # medium 요청시 large-v3 사용
+                'large': 'large-v3'  # large 요청시 large-v3 사용
+            }
 
-        cmd = [
-            'whisper-ctranslate2',
-            file_path,
-            '--model', model,
-            '--output_dir', output_dir,
-            '--output_format', 'all',
-            '--vad_filter', 'True',
-            '--vad_threshold', '0.3',
-            '--vad_min_speech_duration_ms', '100',
-            '--vad_min_silence_duration_ms', '500',
-            '--word_timestamps', 'True',
-            '--beam_size', '5',
-            '--best_of', '5',
-            '--temperature', '0',
-            '--condition_on_previous_text', 'True',
-            '--initial_prompt', '정확한 한국어 자막을 생성합니다.'
-        ]
+            model = model_map.get(model_size, 'large-v3')  # 기본값을 large-v3으로 설정하여 최고 정확도
 
-        # 언어가 auto가 아니면 추가
-        if language != 'auto':
-            cmd.extend(['--language', language])
+            cmd = [
+                'whisper-ctranslate2',
+                file_path,
+                '--model', model,
+                '--output_dir', output_dir,
+                '--output_format', 'all',
+                '--vad_filter', 'True',
+                '--vad_threshold', '0.3',
+                '--vad_min_speech_duration_ms', '100',
+                '--vad_min_silence_duration_ms', '500',
+                '--word_timestamps', 'True',
+                '--beam_size', '5',
+                '--best_of', '5',
+                '--temperature', '0',
+                '--condition_on_previous_text', 'True',
+                '--initial_prompt', '정확한 한국어 자막을 생성합니다.'
+            ]
 
-        # 실행
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+            # 언어가 auto가 아니면 추가
+            if language != 'auto':
+                cmd.extend(['--language', language])
 
-        # 실시간 진행상황 스트리밍 (간단한 버전)
-        stdout, stderr = process.communicate()
+            # 실행
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
 
-        if process.returncode != 0:
-            # 에러 메시지 정리
-            error_msg = stderr.strip() if stderr else 'Unknown error'
-            if 'CUDA' in error_msg or 'GPU' in error_msg:
-                error_msg = 'GPU 처리 실패, CPU 모드로 재시도 필요'
-            elif 'memory' in error_msg.lower():
-                error_msg = '메모리 부족: 더 작은 모델 크기를 선택해주세요'
-            return jsonify({'error': f'변환 실패: {error_msg}'}), 500
+            # 실시간 진행상황 스트리밍 (간단한 버전)
+            stdout, stderr = process.communicate()
+
+            if process.returncode != 0:
+                # 에러 메시지 정리
+                error_msg = stderr.strip() if stderr else 'Unknown error'
+                if 'CUDA' in error_msg or 'GPU' in error_msg:
+                    error_msg = 'GPU 처리 실패, CPU 모드로 재시도 필요'
+                elif 'memory' in error_msg.lower():
+                    error_msg = '메모리 부족: 더 작은 모델 크기를 선택해주세요'
+                return jsonify({'error': f'변환 실패: {error_msg}'}), 500
+
+        except Exception as e:
+            return jsonify({
+                'error': '음성 변환 서비스를 사용할 수 없습니다',
+                'details': str(e)
+            }), 503
 
         # 결과 파일 읽기
         base_name = 'downloaded_video'  # yt-dlp로 다운로드한 파일명
