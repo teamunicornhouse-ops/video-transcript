@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir whisper-ctranslate2
 
 # Whisper 모델 다운로드 (base 모델 - 더 작고 빠름)
-RUN python -c "from whisper_ctranslate2 import WhisperModel; WhisperModel('base')"
+# 모델은 첫 실행 시 자동으로 다운로드됨
 
 # 앱 파일들 복사
 COPY . .
